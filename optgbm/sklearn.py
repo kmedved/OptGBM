@@ -81,6 +81,7 @@ OBJECTIVE2METRIC = {
     "mape": "mape",
     "gamma": "gamma",
     "tweedie": "tweedie",
+    "cross_entropy": "cross_entropy",
 }
 
 
