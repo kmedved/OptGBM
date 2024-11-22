@@ -21,7 +21,11 @@ import pandas as pd
 
 from optuna import distributions
 from optuna import integration
-from optuna_integration.lightgbm import alias
+#from optuna_integration.lightgbm import alias
+
+from optuna_integration._lightgbm_tuner.alias import _handling_alias_metrics
+from optuna_integration._lightgbm_tuner.alias import _handling_alias_parameters
+
 from optuna import samplers
 from optuna import study as study_module
 from optuna import trial as trial_module
@@ -515,7 +519,9 @@ class LGBMModel(lgb.LGBMModel):
 
         params = self.get_params()
 
-        alias._handling_alias_parameters(params)
+        #alias._handling_alias_parameters(params)
+        _handling_alias_parameters(params)
+        # _handling_alias_metrics(params) - Unclear?
 
         if (
             not any(
