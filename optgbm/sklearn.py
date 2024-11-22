@@ -21,7 +21,7 @@ import pandas as pd
 
 from optuna import distributions
 from optuna import integration
-from optuna.integration._lightgbm_tuner import alias
+from optuna_integration.lightgbm import alias
 from optuna import samplers
 from optuna import study as study_module
 from optuna import trial as trial_module
