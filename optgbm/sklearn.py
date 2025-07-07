@@ -196,9 +196,14 @@ class _Objective(object):
             )
 
         if self.enable_pruning:
+            # Pass the evaluation metric name directly without the "-mean"
+            # suffix and specify the validation dataset name used by
+            # ``lgb.cv``.  LightGBMPruningCallback expects these parameters to
+            # match the intermediate results reported during training.
             pruning_callback = integration.LightGBMPruningCallback(
                 trial,
-                "{}-mean".format(self.eval_name),
+                metric=self.eval_name,
+                valid_name="valid",
             )  # type: integration.LightGBMPruningCallback
 
             callbacks.append(pruning_callback)
