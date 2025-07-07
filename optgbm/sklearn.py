@@ -24,8 +24,8 @@ from optuna import integration
 
 # from optuna_integration.lightgbm import alias
 
-from optuna_integration._lightgbm_tuner.alias import _handling_alias_metrics
-from optuna_integration._lightgbm_tuner.alias import _handling_alias_parameters
+from .alias import _handling_alias_metrics
+from .alias import _handling_alias_parameters
 
 from optuna import samplers
 from optuna import study as study_module
