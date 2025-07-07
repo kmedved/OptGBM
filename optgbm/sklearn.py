@@ -1197,10 +1197,10 @@ class LGBMRegressor(LGBMModel, RegressorMixin):
     Examples
     --------
     >>> import optgbm as lgb
-    >>> from sklearn.datasets import load_boston
+    >>> from sklearn.datasets import load_diabetes
     >>> tmp_path = getfixture("tmp_path")  # noqa
     >>> reg = lgb.LGBMRegressor(random_state=0, model_dir=tmp_path)
-    >>> X, y = load_boston(return_X_y=True)
+    >>> X, y = load_diabetes(return_X_y=True)
     >>> reg.fit(X, y)
     LGBMRegressor(...)
     >>> y_pred = reg.predict(X)
