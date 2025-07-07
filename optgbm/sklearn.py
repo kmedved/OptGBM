@@ -197,7 +197,8 @@ class _Objective(object):
 
         if self.enable_pruning:
             pruning_callback = integration.LightGBMPruningCallback(
-                trial, self.eval_name
+                trial,
+                "{}-mean".format(self.eval_name),
             )  # type: integration.LightGBMPruningCallback
 
             callbacks.append(pruning_callback)
