@@ -2,13 +2,14 @@
 
 import logging
 
-from pkg_resources import DistributionNotFound
-from pkg_resources import get_distribution
+try:
+    from importlib.metadata import version
+except ImportError:  # pragma: no cover - Python < 3.8
+    from importlib_metadata import version  # type: ignore
 
 try:
-    distribution = get_distribution(__name__)
-    __version__ = distribution.version
-except DistributionNotFound:
+    __version__ = version(__name__)
+except Exception:  # pragma: no cover
     pass
 
 from lightgbm import *  # noqa
