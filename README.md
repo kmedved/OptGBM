@@ -8,6 +8,8 @@
 
 OptGBM (= [Optuna](https://optuna.org/) + [LightGBM](http://github.com/microsoft/LightGBM)) provides a scikit-learn compatible estimator that tunes hyperparameters in LightGBM with Optuna.
 
+This package requires Python 3.8 or newer.
+
 ## Examples
 
 ```python
