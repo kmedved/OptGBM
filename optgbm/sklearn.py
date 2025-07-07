@@ -21,7 +21,8 @@ import pandas as pd
 
 from optuna import distributions
 from optuna import integration
-#from optuna_integration.lightgbm import alias
+
+# from optuna_integration.lightgbm import alias
 
 from optuna_integration._lightgbm_tuner.alias import _handling_alias_metrics
 from optuna_integration._lightgbm_tuner.alias import _handling_alias_parameters
@@ -147,7 +148,6 @@ class _Objective(object):
             params,
             dataset,
             callbacks=callbacks,
-            early_stopping_rounds=self.early_stopping_rounds,
             feval=self.feval,
             fobj=self.fobj,
             folds=self.cv,
@@ -184,6 +184,14 @@ class _Objective(object):
             _LightGBMExtractionCallback()
         )  # type: _LightGBMExtractionCallback
         callbacks = [extraction_callback]  # type: List[Callable]
+
+        if self.early_stopping_rounds is not None:
+            callbacks.append(
+                lgb.early_stopping(
+                    stopping_rounds=self.early_stopping_rounds,
+                    verbose=False,
+                )
+            )
 
         if self.enable_pruning:
             pruning_callback = integration.LightGBMPruningCallback(
@@ -232,10 +240,10 @@ class _Objective(object):
                 )
 
                 if params["bagging_freq"] > 0:
-                    params[
-                        "bagging_fraction"
-                    ] = trial.suggest_discrete_uniform(
-                        "bagging_fraction", 0.5, 0.95, 0.05
+                    params["bagging_fraction"] = (
+                        trial.suggest_discrete_uniform(
+                            "bagging_fraction", 0.5, 0.95, 0.05
+                        )
                     )
 
             return params
@@ -519,7 +527,7 @@ class LGBMModel(lgb.LGBMModel):
 
         params = self.get_params()
 
-        #alias._handling_alias_parameters(params)
+        # alias._handling_alias_parameters(params)
         _handling_alias_parameters(params)
         # _handling_alias_metrics(params) - Unclear?
 
