@@ -26,7 +26,7 @@ By default, the following hyperparameters will be searched.
 
 - `bagging_fraction`
 - `bagging_freq`
-- `feature_fractrion`
+- `feature_fraction`
 - `lambda_l1`
 - `lambda_l2`
 - `max_depth`
