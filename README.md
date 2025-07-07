@@ -12,10 +12,10 @@ OptGBM (= [Optuna](https://optuna.org/) + [LightGBM](http://github.com/microsoft
 
 ```python
 import optgbm as lgb
-from sklearn.datasets import load_boston
+from sklearn.datasets import load_diabetes
 
 reg = lgb.LGBMRegressor(random_state=0)
-X, y = load_boston(return_X_y=True)
+X, y = load_diabetes(return_X_y=True)
 
 reg.fit(X, y)
 
