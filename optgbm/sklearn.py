@@ -144,12 +144,14 @@ class _Objective(object):
         params = self._get_params(trial)  # type: Dict[str, Any]
         dataset = copy.copy(self.dataset)
         callbacks = self._get_callbacks(trial)  # type: List[Callable]
+        if self.fobj is not None:
+            params["fobj"] = self.fobj
+        if self.feval is not None:
+            params["feval"] = self.feval
         eval_hist = lgb.cv(
             params,
             dataset,
             callbacks=callbacks,
-            feval=self.feval,
-            fobj=self.fobj,
             folds=self.cv,
             init_model=self.init_model,
             num_boost_round=self.n_estimators,
