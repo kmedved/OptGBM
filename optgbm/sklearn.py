@@ -97,6 +97,7 @@ def _is_higher_better(metric: str) -> bool:
         "auc_mu",
         "average_precision",
         "map",
+        "ndcg",
         "accuracy",
         "f1",
         "r2",
