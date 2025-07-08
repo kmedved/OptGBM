@@ -410,6 +410,38 @@ class LGBMModel(lgb.LGBMModel):
 
         return self.study
 
+    def predict(  # type: ignore[override]
+        self,
+        X: TwoDimArrayLikeType,
+        raw_score: bool = False,
+        start_iteration: int = 0,
+        num_iteration: Optional[int] = None,
+        pred_leaf: bool = False,
+        pred_contrib: bool = False,
+        validate_features: bool = True,
+        **kwargs: Any,
+    ) -> np.ndarray:
+        """Customized predict that strips OptGBM-only params before calling LightGBM."""
+
+        self._check_is_fitted()
+
+        n_threads = kwargs.pop("n_jobs", self.n_jobs)
+        n_threads = self._process_n_jobs(n_threads)
+
+        predict_params: Dict[str, Any] = {"num_threads": n_threads}
+        predict_params.update(kwargs)
+
+        return self._Booster.predict(
+            X,
+            raw_score=raw_score,
+            start_iteration=start_iteration,
+            num_iteration=num_iteration,
+            pred_leaf=pred_leaf,
+            pred_contrib=pred_contrib,
+            validate_features=validate_features,
+            **predict_params,
+        )
+
     def fit(
         self,
         X: TwoDimArrayLikeType,
