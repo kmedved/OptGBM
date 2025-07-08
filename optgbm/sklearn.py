@@ -279,7 +279,7 @@ class LGBMModel(lgb.LGBMModel):
         reg_alpha: float = 0.0,
         reg_lambda: float = 0.0,
         random_state: Optional[RandomStateType] = None,
-        n_jobs: int = -1,
+        n_jobs: Optional[int] = None,
         verbosity: int = -1,
         importance_type: str = "split",
         cv: CVType = 5,
@@ -792,7 +792,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
         state from `numpy.random` is used.
 
     n_jobs
-        Number of parallel jobs. -1 means using all processors.
+        Number of parallel jobs. ``None`` means using all processors.
 
     verbosity
         Controls the level of LightGBM's verbosity. ``-1`` means silent.
@@ -1111,7 +1111,7 @@ class LGBMRegressor(LGBMModel, RegressorMixin):
         state from `numpy.random` is used.
 
     n_jobs
-        Number of parallel jobs. -1 means using all processors.
+        Number of parallel jobs. ``None`` means using all processors.
 
     verbosity
         Controls the level of LightGBM's verbosity. ``-1`` means silent.
