@@ -15,8 +15,6 @@ from sklearn.utils import check_array
 from sklearn.utils import check_consistent_length
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.utils.multiclass import check_classification_targets
-from sklearn.utils.validation import _assert_all_finite
-from sklearn.utils.validation import _num_samples
 from sklearn.utils.validation import column_or_1d
 
 from .typing import CVType
@@ -135,13 +133,13 @@ def check_fit_params(
     if not isinstance(y, pd.Series):
         y = column_or_1d(y, warn=True)
 
-    _assert_all_finite(y)
+    y = check_array(y, ensure_2d=False, dtype=None)
 
     if is_classifier(estimator):
         check_classification_targets(y)
 
     if sample_weight is None:
-        n_samples = _num_samples(X)
+        n_samples = len(X)
         sample_weight = np.ones(n_samples)
 
     sample_weight = np.asarray(sample_weight)

@@ -261,6 +261,7 @@ def test_fit_with_fit_params(
         y,
         callbacks=callbacks,
         eval_metric=eval_metric,
+        eval_direction="minimize" if callable(eval_metric) else None,
         optuna_callbacks=optuna_callbacks,
     )
 

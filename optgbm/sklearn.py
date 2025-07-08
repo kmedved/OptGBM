@@ -5,7 +5,7 @@ import logging
 import pathlib
 import pickle
 import time
-from inspect import signature
+import tempfile
 
 from typing import Any
 from typing import Callable
@@ -90,7 +90,16 @@ OBJECTIVE2METRIC = {
 
 
 def _is_higher_better(metric: str) -> bool:
-    return metric in ["auc"]
+    # A more comprehensive list of metrics where higher is better.
+    return metric in [
+        "auc",
+        "auc_mu",
+        "average_precision",
+        "map",
+        "accuracy",
+        "f1",
+        "r2",
+    ]
 
 
 class _Objective(object):
@@ -279,7 +288,7 @@ class LGBMModel(lgb.LGBMModel):
         refit: bool = True,
         study: Optional[study_module.Study] = None,
         timeout: Optional[float] = None,
-        model_dir: Union[pathlib.Path, str] = "optgbm_info",
+        model_dir: Optional[Union[pathlib.Path, str]] = None,
     ) -> None:
         super().__init__(
             boosting_type=boosting_type,
@@ -312,6 +321,7 @@ class LGBMModel(lgb.LGBMModel):
         self.study = study
         self.timeout = timeout
         self.model_dir = model_dir
+        self._temp_dir = None
 
     def _check_is_fitted(self) -> None:
         getattr(self, "fitted_")
@@ -336,9 +346,11 @@ class LGBMModel(lgb.LGBMModel):
         return random_state.randint(0, MAX_INT)
 
     def _get_model_dir(self) -> pathlib.Path:
-        model_dir = str(self.model_dir)
-
-        return pathlib.Path(model_dir)
+        if self.model_dir is None:
+            if self._temp_dir is None:
+                self._temp_dir = tempfile.TemporaryDirectory()
+            return pathlib.Path(self._temp_dir.name)
+        return pathlib.Path(str(self.model_dir))
 
     def _make_booster(
         self,
@@ -400,6 +412,7 @@ class LGBMModel(lgb.LGBMModel):
         sample_weight: Optional[OneDimArrayLikeType] = None,
         group: Optional[OneDimArrayLikeType] = None,
         eval_metric: Optional[Union[Callable, List[str], str]] = None,
+        eval_direction: Optional[str] = None,
         early_stopping_rounds: Optional[int] = 10,
         feature_name: Union[List[str], str] = "auto",
         categorical_feature: Union[List[int], List[str], str] = "auto",
@@ -428,6 +441,10 @@ class LGBMModel(lgb.LGBMModel):
         eval_metric
             Evaluation metric. See
             https://lightgbm.readthedocs.io/en/latest/Parameters.html#metric.
+
+        eval_direction
+            Optimization direction when ``eval_metric`` is a callable. Must be
+            either 'minimize' or 'maximize'.
 
         early_stopping_rounds
             Used to activate early stopping. The model will train until the
@@ -536,17 +553,15 @@ class LGBMModel(lgb.LGBMModel):
             params["num_classes"] = self._n_classes
 
         if callable(eval_metric):
+            if eval_direction not in ["minimize", "maximize"]:
+                raise ValueError(
+                    "When using a callable for `eval_metric`, you must provide "
+                    "`eval_direction` as either 'minimize' or 'maximize'."
+                )
             params["metric"] = "None"
-            feval = eval_metric  # Pass the callable directly
-
-            args = [p.name for p in signature(eval_metric).parameters.values()]
-
-            if len(args) > 3:
-                eval_name, _, is_higher_better = eval_metric(y, y, sample_weight, group)
-            elif len(args) > 2:
-                eval_name, _, is_higher_better = eval_metric(y, y, sample_weight)
-            else:
-                eval_name, _, is_higher_better = eval_metric(y, y)
+            feval = eval_metric
+            eval_name, _, _ = feval(y, y)
+            is_higher_better = eval_direction == "maximize"
 
         elif isinstance(eval_metric, list):
             raise ValueError("eval_metric is not allowed to be a list.")
@@ -791,7 +806,8 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
         vs quality of the solution.
 
     model_dir
-        Directory for storing the files generated during training.
+        Directory for storing the files generated during training. If None,
+        a temporary directory is used.
 
     Attributes
     ----------
@@ -859,6 +875,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
         sample_weight: Optional[OneDimArrayLikeType] = None,
         group: Optional[OneDimArrayLikeType] = None,
         eval_metric: Optional[Union[Callable, List[str], str]] = None,
+        eval_direction: Optional[str] = None,
         early_stopping_rounds: Optional[int] = 10,
         feature_name: Union[List[str], str] = "auto",
         categorical_feature: Union[List[int], List[str], str] = "auto",
@@ -882,6 +899,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
             sample_weight=sample_weight,
             group=group,
             eval_metric=eval_metric,
+            eval_direction=eval_direction,
             early_stopping_rounds=early_stopping_rounds,
             feature_name=feature_name,
             categorical_feature=categorical_feature,
