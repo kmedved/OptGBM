@@ -68,7 +68,7 @@ OBJECTIVE2METRIC = {
     "ova": "multi_logloss",
     "ovr": "multi_logloss",
     # regression
-    "mean_absoluter_error": "l1",
+    "mean_absolute_error": "l1",
     "mae": "l1",
     "regression_l1": "l1",
     "l2_root": "l2",
@@ -280,7 +280,7 @@ class LGBMModel(lgb.LGBMModel):
         reg_lambda: float = 0.0,
         random_state: Optional[RandomStateType] = None,
         n_jobs: int = -1,
-        verbose: int = -1,
+        verbosity: int = -1,
         importance_type: str = "split",
         cv: CVType = 5,
         enable_pruning: bool = False,
@@ -291,6 +291,7 @@ class LGBMModel(lgb.LGBMModel):
         timeout: Optional[float] = None,
         model_dir: Optional[Union[pathlib.Path, str]] = None,
     ) -> None:
+        self.verbose = -1 if verbosity is None else verbosity
         super().__init__(
             boosting_type=boosting_type,
             num_leaves=num_leaves,
@@ -310,7 +311,7 @@ class LGBMModel(lgb.LGBMModel):
             reg_lambda=reg_lambda,
             random_state=random_state,
             n_jobs=n_jobs,
-            verbose=verbose,
+            verbose=self.verbose,
             importance_type=importance_type,
         )
 
@@ -671,6 +672,9 @@ class LGBMModel(lgb.LGBMModel):
         self.best_params_ = {**params, **self.study_.best_params}
         self.n_splits_ = cv.get_n_splits(X, y, groups=groups)
         self.fitted_ = True
+        self.n_features_in_ = self._n_features
+        if self.refit:
+            self.n_iter_ = self._Booster.current_iteration()
 
         logger.info(
             "Finished hyperparemeter search! "
@@ -787,7 +791,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
     n_jobs
         Number of parallel jobs. -1 means using all processors.
 
-    verbose
+    verbosity
         Controls the level of LightGBM's verbosity. ``-1`` means silent.
 
     importance_type
@@ -1106,7 +1110,7 @@ class LGBMRegressor(LGBMModel, RegressorMixin):
     n_jobs
         Number of parallel jobs. -1 means using all processors.
 
-    verbose
+    verbosity
         Controls the level of LightGBM's verbosity. ``-1`` means silent.
 
     importance_type
