@@ -9,6 +9,7 @@ from typing import Optional
 
 import numpy as np
 from natsort import natsorted
+from joblib import Parallel, delayed
 
 from .typing import TwoDimArrayLikeType
 
@@ -55,29 +56,37 @@ class _VotingBooster(object):
         pred_contrib: bool = False,
         **predict_params: Any
     ) -> np.ndarray:
-        logger = logging.getLogger(__name__)
+        """Perform prediction with the voting ensemble, managing parallelism correctly."""
 
         if raw_score:
             raise ValueError("_VotingBooster cannot return raw scores.")
-
         if pred_leaf:
             raise ValueError("_VotingBooster cannot return leaf indices.")
-
         if pred_contrib:
-            raise ValueError(
-                "_VotingBooster cannot return feature contributions."
-            )
+            raise ValueError("_VotingBooster cannot return feature contributions.")
 
-        for key, value in predict_params.items():
-            logger.warning("{}={} will be ignored.".format(key, value))
+        # Pop scikit-learn specific args that the base Booster does not accept.
+        predict_params.pop("validate_features", None)
 
-        results = [
-            b.predict(
+        # Manage parallelism: Use n_jobs for outer parallelism with joblib,
+        # and force inner LightGBM processes to be single-threaded to avoid
+        # CPU oversubscription.
+        n_jobs = predict_params.pop("num_threads", 1)
+        inner_threads = 1
+
+        def predict_single(booster: Any) -> np.ndarray:
+            """Prediction function for a single booster."""
+            return booster.predict(
                 X,
                 start_iteration=start_iteration,
                 num_iteration=num_iteration,
+                num_threads=inner_threads,
+                **predict_params,
             )
-            for b in self._boosters
-        ]
+
+        # Run predictions in parallel using joblib
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(predict_single)(b) for b in self._boosters
+        )
 
         return np.average(results, axis=0, weights=self.weights)
