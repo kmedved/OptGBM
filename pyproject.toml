@@ -9,8 +9,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "OptGBM"
 dynamic = ["version"]
-author = "Y-oHr-N"
-author_email = "y.ohr.n@gmail.com"
+authors = [
+    {name = "Y-oHr-N", email = "y.ohr.n@gmail.com"},
+]
 description = "Scikit-learn compatible estimator that tunes hyperparameters in LightGBM with Optuna."
 readme = "README.md"
 license = { text = "MIT License" }
