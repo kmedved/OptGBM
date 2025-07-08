@@ -79,7 +79,7 @@ def check_X(
         X = check_array(X, estimator=estimator, **kwargs)
 
     _, actual_n_features = X.shape
-    expected_n_features = getattr(estimator, "n_features_", actual_n_features)
+    expected_n_features = getattr(estimator, "_n_features", actual_n_features)
 
     if actual_n_features != expected_n_features:
         raise ValueError(
