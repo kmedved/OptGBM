@@ -156,7 +156,10 @@ class _Objective(object):
             return_cvbooster=True,
         )  # Dict[str, Any]
         # Note: The validation set in lgb.cv is named "valid" by default.
-        values = eval_hist[f"valid {self.eval_name}-mean"]  # type: List[float]
+        key = f"{self.eval_name}-mean"
+        if key not in eval_hist:
+            key = f"valid {key}"
+        values = eval_hist[key]  # type: List[float]
         best_iteration = len(values)  # type: int
 
         trial.set_user_attr("best_iteration", best_iteration)
@@ -198,6 +201,7 @@ class _Objective(object):
             pruning_callback = integration.LightGBMPruningCallback(
                 trial,
                 metric=self.eval_name,
+                valid_name="valid",
             )  # type: integration.LightGBMPruningCallback
 
             callbacks.append(pruning_callback)
@@ -273,7 +277,7 @@ class LGBMModel(lgb.LGBMModel):
         self._check_is_fitted()
 
         # This now correctly calls our own booster_ property
-        return self.booster_.feature_importance(self.importance_type)
+        return self.booster_.feature_importance(importance_type=self.importance_type)
 
     @property
     def n_features_(self) -> int:
@@ -567,7 +571,7 @@ class LGBMModel(lgb.LGBMModel):
             sample_weight=sample_weight,
             accept_sparse=True,
             ensure_min_samples=2,
-            estimator=self,
+            estimator=None,
             force_all_finite=False,
         )
 
@@ -704,6 +708,7 @@ class LGBMModel(lgb.LGBMModel):
         best_iteration = self.study_.best_trial.user_attrs["best_iteration"]
 
         self._best_iteration = None if early_stopping_rounds is None else best_iteration
+        self.best_iteration_ = self._best_iteration
         self._best_score = self.study_.best_value
         self._objective = params["objective"]
         self.best_params_ = {**params, **self.study_.best_params}
