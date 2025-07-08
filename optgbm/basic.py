@@ -48,6 +48,7 @@ class _VotingBooster(object):
     def predict(
         self,
         X: TwoDimArrayLikeType,
+        start_iteration: int = 0,
         num_iteration: Optional[int] = None,
         raw_score: bool = False,
         pred_leaf: bool = False,
@@ -71,7 +72,12 @@ class _VotingBooster(object):
             logger.warning("{}={} will be ignored.".format(key, value))
 
         results = [
-            b.predict(X, num_iteration=num_iteration) for b in self._boosters
+            b.predict(
+                X,
+                start_iteration=start_iteration,
+                num_iteration=num_iteration,
+            )
+            for b in self._boosters
         ]
 
         return np.average(results, axis=0, weights=self.weights)
