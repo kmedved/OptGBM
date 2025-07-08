@@ -534,7 +534,7 @@ class LGBMModel(lgb.LGBMModel):
             accept_sparse=True,
             ensure_min_samples=2,
             estimator=self,
-            ensure_all_finite=False,
+            force_all_finite=False,
         )
 
         # See https://github.com/microsoft/LightGBM/issues/2319
