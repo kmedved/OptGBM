@@ -15,7 +15,6 @@ except Exception:  # pragma: no cover
 from lightgbm import *  # noqa
 
 from . import basic  # noqa
-from . import compat  # noqa
 from . import sklearn  # noqa
 from . import typing  # noqa
 from . import utils  # noqa

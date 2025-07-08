@@ -13,14 +13,14 @@ import pandas as pd
 from scipy.sparse import spmatrix
 from sklearn.model_selection import BaseCrossValidator
 
-from .compat import _CVBooster
+from lightgbm.engine import CVBooster
 
 CVType = Union[BaseCrossValidator, int, List[Tuple]]
 
 LightGBMCallbackEnvType = NamedTuple(
     "LightGBMCallbackEnvType",
     [
-        ("model", _CVBooster),
+        ("model", CVBooster),
         ("params", Dict[str, Any]),
         ("iteration", int),
         ("begin_iteration", int),
