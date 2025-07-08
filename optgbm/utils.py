@@ -6,6 +6,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+import inspect
 
 from sklearn.base import BaseEstimator
 from sklearn.base import is_classifier
@@ -55,7 +56,7 @@ def check_cv(
 def check_X(
     X: TwoDimArrayLikeType,
     estimator: Optional[BaseEstimator] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> TwoDimArrayLikeType:
     """Check `X`.
 
@@ -76,12 +77,27 @@ def check_X(
         Converted and validated data.
     """
     if not isinstance(X, pd.DataFrame):
+        # scikit-learn >=1.6 renamed the flag. Handle this transparently.
+        if "ensure_all_finite" in inspect.signature(check_array).parameters:
+            # For new scikit-learn: prefer ensure_all_finite, use force_all_finite as fallback
+            kwargs.setdefault(
+                "ensure_all_finite", kwargs.pop("force_all_finite", True)
+            )
+        else:
+            # For old scikit-learn: prefer force_all_finite, use ensure_all_finite as fallback
+            kwargs.setdefault(
+                "force_all_finite", kwargs.pop("ensure_all_finite", True)
+            )
+
         X = check_array(X, estimator=estimator, **kwargs)
 
     _, actual_n_features = X.shape
     expected_n_features = getattr(estimator, "_n_features", actual_n_features)
 
-    if actual_n_features != expected_n_features:
+    if (
+        expected_n_features not in (-1, None)
+        and actual_n_features != expected_n_features
+    ):
         raise ValueError(
             "`n_features` must be {} but was {}.".format(
                 expected_n_features, actual_n_features
@@ -96,7 +112,7 @@ def check_fit_params(
     y: OneDimArrayLikeType,
     sample_weight: Optional[OneDimArrayLikeType] = None,
     estimator: Optional[BaseEstimator] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Tuple[TwoDimArrayLikeType, OneDimArrayLikeType, OneDimArrayLikeType]:
     """Check `X`, `y` and `sample_weight`.
 
