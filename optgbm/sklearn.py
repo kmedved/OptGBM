@@ -280,7 +280,7 @@ class LGBMModel(lgb.LGBMModel):
         reg_lambda: float = 0.0,
         random_state: Optional[RandomStateType] = None,
         n_jobs: int = -1,
-        silent: bool = True,
+        verbose: int = -1,
         importance_type: str = "split",
         cv: CVType = 5,
         enable_pruning: bool = False,
@@ -310,7 +310,7 @@ class LGBMModel(lgb.LGBMModel):
             reg_lambda=reg_lambda,
             random_state=random_state,
             n_jobs=n_jobs,
-            silent=silent,
+            verbose=verbose,
             importance_type=importance_type,
         )
 
@@ -532,14 +532,6 @@ class LGBMModel(lgb.LGBMModel):
 
         params = self.get_params()
 
-        if (
-            not any(
-                verbose_alias in params for verbose_alias in ("verbose", "verbosity")
-            )
-            and self.silent
-        ):
-            params["verbose"] = -1
-
         for attr in (
             "class_weight",
             "cv",
@@ -549,7 +541,6 @@ class LGBMModel(lgb.LGBMModel):
             "n_trials",
             "param_distributions",
             "refit",
-            "silent",
             "study",
             "timeout",
             "model_dir",
@@ -768,8 +759,8 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
     n_jobs
         Number of parallel jobs. -1 means using all processors.
 
-    silent
-        If False, print messages while running boosting.
+    verbose
+        Controls the level of LightGBM's verbosity. ``-1`` means silent.
 
     importance_type
         Type of feature importances. If 'split', result contains numbers of
@@ -1087,8 +1078,8 @@ class LGBMRegressor(LGBMModel, RegressorMixin):
     n_jobs
         Number of parallel jobs. -1 means using all processors.
 
-    silent
-        If False, print messages while running boosting.
+    verbose
+        Controls the level of LightGBM's verbosity. ``-1`` means silent.
 
     importance_type
         Type of feature importances. If 'split', result contains numbers of
