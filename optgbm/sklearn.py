@@ -32,6 +32,7 @@ from sklearn.base import ClassifierMixin
 from sklearn.base import RegressorMixin
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
+from sklearn.model_selection import GroupKFold
 
 from .basic import _VotingBooster
 
@@ -518,6 +519,11 @@ class LGBMModel(lgb.LGBMModel):
 
         is_classifier = self._estimator_type == "classifier"
         cv = check_cv(self.cv, y, classifier=is_classifier)
+
+        # Defensively set groups to None if the CV strategy is not group-aware.
+        # This prevents warnings when the user isn't using groups.
+        if not isinstance(cv, GroupKFold):
+            groups = None
 
         seed = self._get_random_state()
 
