@@ -690,7 +690,11 @@ class LGBMModel(lgb.LGBMModel):
         self.best_params_ = {**params, **self.study_.best_params}
         self.n_splits_ = cv.get_n_splits(X, y, groups=groups)
         self.fitted_ = True
-        self.n_features_in_ = self._n_features
+
+        # ``n_features_in_`` and ``n_features_`` are read-only properties in
+        # recent versions of LightGBM's scikit-learn API.  ``_n_features`` and
+        # ``_n_features_in`` hold the actual values, so update those instead.
+        self._n_features_in = self._n_features
 
         logger.info(
             "Finished hyperparemeter search! "
@@ -713,8 +717,6 @@ class LGBMModel(lgb.LGBMModel):
             callbacks=callbacks,
             init_model=init_model,
         )
-
-        self.n_features_ = self._n_features
 
         if self.refit:
             self.n_iter_ = self._Booster.current_iteration()
