@@ -34,9 +34,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
 
 from .basic import _VotingBooster
-from lightgbm.sklearn import _EvalFunctionWrapper
-from lightgbm.sklearn import _ObjectiveFunctionWrapper
-from sklearn.utils import _safe_indexing
+from sklearn.utils import safe_indexing
 from .typing import CVType
 from .typing import LightGBMCallbackEnvType
 from .typing import OneDimArrayLikeType
@@ -299,30 +297,28 @@ class LGBMModel(lgb.LGBMModel):
         study: Optional[study_module.Study] = None,
         timeout: Optional[float] = None,
         model_dir: Union[pathlib.Path, str] = "optgbm_info",
-        **kwargs: Any
     ) -> None:
         super().__init__(
             boosting_type=boosting_type,
-            class_weight=class_weight,
-            colsample_bytree=colsample_bytree,
-            importance_type=importance_type,
-            learning_rate=learning_rate,
-            max_depth=max_depth,
-            min_child_samples=min_child_samples,
-            min_child_weight=min_child_weight,
-            min_split_gain=min_split_gain,
             num_leaves=num_leaves,
+            max_depth=max_depth,
+            learning_rate=learning_rate,
             n_estimators=n_estimators,
-            n_jobs=n_jobs,
+            subsample_for_bin=subsample_for_bin,
             objective=objective,
-            random_state=random_state,
+            class_weight=class_weight,
+            min_split_gain=min_split_gain,
+            min_child_weight=min_child_weight,
+            min_child_samples=min_child_samples,
+            subsample=subsample,
+            subsample_freq=subsample_freq,
+            colsample_bytree=colsample_bytree,
             reg_alpha=reg_alpha,
             reg_lambda=reg_lambda,
+            random_state=random_state,
+            n_jobs=n_jobs,
             silent=silent,
-            subsample=subsample,
-            subsample_for_bin=subsample_for_bin,
-            subsample_freq=subsample_freq,
-            **kwargs
+            importance_type=importance_type,
         )
 
         self.cv = cv
@@ -510,10 +506,10 @@ class LGBMModel(lgb.LGBMModel):
         if group is None and groups is not None:
             groups, _ = pd.factorize(groups)
             indices = np.argsort(groups)
-            X = _safe_indexing(X, indices)
-            y = _safe_indexing(y, indices)
-            sample_weight = _safe_indexing(sample_weight, indices)
-            groups = _safe_indexing(groups, indices)
+            X = safe_indexing(X, indices)
+            y = safe_indexing(y, indices)
+            sample_weight = safe_indexing(sample_weight, indices)
+            groups = safe_indexing(groups, indices)
             _, group = np.unique(groups, return_counts=True)
 
         n_samples, self._n_features = X.shape  # type: Tuple[int, int]
@@ -564,7 +560,7 @@ class LGBMModel(lgb.LGBMModel):
 
         if callable(eval_metric):
             params["metric"] = "None"
-            feval = _EvalFunctionWrapper(eval_metric)
+            feval = eval_metric  # Pass the callable directly
 
             args = [p.name for p in signature(eval_metric).parameters.values()]
 
@@ -592,11 +588,7 @@ class LGBMModel(lgb.LGBMModel):
             eval_name = params["metric"]
             is_higher_better = _is_higher_better(params["metric"])
 
-        fobj = (
-            _ObjectiveFunctionWrapper(self.objective)
-            if callable(self.objective)
-            else None
-        )
+        fobj = self.objective if callable(self.objective) else None  # Pass the callable directly
 
         init_model = (
             init_model.booster_
@@ -832,12 +824,6 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
 
     model_dir
         Directory for storing the files generated during training.
-
-    **kwargs
-        Other parameters for the model. See
-        http://lightgbm.readthedocs.io/en/latest/Parameters.html for more
-        parameters. Note, that `**kwargs` is not supported in sklearn, so it
-        may cause unexpected issues.
 
     Attributes
     ----------
@@ -1155,11 +1141,6 @@ class LGBMRegressor(LGBMModel, RegressorMixin):
     model_dir
         Directory for storing the files generated during training.
 
-    **kwargs
-        Other parameters for the model. See
-        http://lightgbm.readthedocs.io/en/latest/Parameters.html for more
-        parameters. Note, that `**kwargs` is not supported in sklearn, so it
-        may cause unexpected issues.
 
     Attributes
     ----------
