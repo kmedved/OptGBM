@@ -13,7 +13,7 @@ import pandas as pd
 from scipy.sparse import spmatrix
 from sklearn.model_selection import BaseCrossValidator
 
-from lightgbm.engine import CVBooster
+from lightgbm import CVBooster
 
 CVType = Union[BaseCrossValidator, int, List[Tuple]]
 

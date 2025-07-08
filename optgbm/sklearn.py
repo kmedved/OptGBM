@@ -34,7 +34,11 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
 
 from .basic import _VotingBooster
-from sklearn.utils import safe_indexing
+
+try:
+    from sklearn.utils import safe_indexing
+except ImportError:  # scikit-learn >=1.3
+    from sklearn.utils import _safe_indexing as safe_indexing
 from .typing import CVType
 from .typing import LightGBMCallbackEnvType
 from .typing import OneDimArrayLikeType
@@ -89,15 +93,6 @@ def _is_higher_better(metric: str) -> bool:
     return metric in ["auc"]
 
 
-class _LightGBMExtractionCallback(object):
-    @property
-    def boosters_(self) -> List[lgb.Booster]:
-        return self.env_.model.boosters
-
-    def __call__(self, env: LightGBMCallbackEnvType) -> None:
-        self.env_ = env
-
-
 class _Objective(object):
     def __init__(
         self,
@@ -115,9 +110,7 @@ class _Objective(object):
         fobj: Optional[Callable] = None,
         init_model: Optional[Union[lgb.Booster, lgb.LGBMModel, str]] = None,
         n_estimators: int = 100,
-        param_distributions: Optional[
-            Dict[str, distributions.BaseDistribution]
-        ] = None,
+        param_distributions: Optional[Dict[str, distributions.BaseDistribution]] = None,
     ) -> None:
         self.callbacks = callbacks
         self.cv = cv
@@ -150,11 +143,10 @@ class _Objective(object):
             folds=self.cv,
             init_model=self.init_model,
             num_boost_round=self.n_estimators,
-        )  # Dict[str, List[float]]
+            return_cvbooster=True,
+        )  # Dict[str, Any]
         # Note: The validation set in lgb.cv is named "valid" by default.
-        values = eval_hist[
-            f"valid {self.eval_name}-mean"
-        ]  # type: List[float]
+        values = eval_hist[f"valid {self.eval_name}-mean"]  # type: List[float]
         best_iteration = len(values)  # type: int
 
         trial.set_user_attr("best_iteration", best_iteration)
@@ -163,7 +155,7 @@ class _Objective(object):
 
         trial_path.mkdir(exist_ok=True, parents=True)
 
-        boosters = callbacks[0].boosters_  # type: ignore
+        boosters = eval_hist["cvbooster"].boosters
 
         for i, b in enumerate(boosters):
             b.best_iteration = best_iteration
@@ -178,10 +170,7 @@ class _Objective(object):
         return values[-1]
 
     def _get_callbacks(self, trial: trial_module.Trial) -> List[Callable]:
-        extraction_callback = (
-            _LightGBMExtractionCallback()
-        )  # type: _LightGBMExtractionCallback
-        callbacks = [extraction_callback]  # type: List[Callable]
+        callbacks = []  # type: List[Callable]
 
         if self.early_stopping_rounds is not None:
             callbacks.append(
@@ -225,12 +214,8 @@ class _Objective(object):
                 1,
                 max(1, int(self.n_samples / params["num_leaves"])),
             )
-            params["lambda_l1"] = trial.suggest_float(
-                "lambda_l1", 1e-9, 10.0, log=True
-            )
-            params["lambda_l2"] = trial.suggest_float(
-                "lambda_l2", 1e-9, 10.0, log=True
-            )
+            params["lambda_l1"] = trial.suggest_float("lambda_l1", 1e-9, 10.0, log=True)
+            params["lambda_l2"] = trial.suggest_float("lambda_l2", 1e-9, 10.0, log=True)
 
             if params["boosting_type"] != "goss":
                 if params["boosting_type"] == "rf":
@@ -290,9 +275,7 @@ class LGBMModel(lgb.LGBMModel):
         cv: CVType = 5,
         enable_pruning: bool = False,
         n_trials: int = 40,
-        param_distributions: Optional[
-            Dict[str, distributions.BaseDistribution]
-        ] = None,
+        param_distributions: Optional[Dict[str, distributions.BaseDistribution]] = None,
         refit: bool = True,
         study: Optional[study_module.Study] = None,
         timeout: Optional[float] = None,
@@ -397,9 +380,7 @@ class LGBMModel(lgb.LGBMModel):
             seed = self._get_random_state()
             sampler = samplers.TPESampler(seed=seed)
 
-            return study_module.create_study(
-                direction=direction, sampler=sampler
-            )
+            return study_module.create_study(direction=direction, sampler=sampler)
 
         _direction = (
             study_module.StudyDirection.MAXIMIZE
@@ -408,9 +389,7 @@ class LGBMModel(lgb.LGBMModel):
         )
 
         if self.study.direction != _direction:
-            raise ValueError(
-                "direction of study must be '{}'.".format(direction)
-            )
+            raise ValueError("direction of study must be '{}'.".format(direction))
 
         return self.study
 
@@ -428,7 +407,7 @@ class LGBMModel(lgb.LGBMModel):
         init_model: Optional[Union[lgb.Booster, lgb.LGBMModel, str]] = None,
         groups: Optional[OneDimArrayLikeType] = None,
         optuna_callbacks: Optional[List[Callable]] = None,
-        **fit_params: Any
+        **fit_params: Any,
     ) -> "LGBMModel":
         """Fit the model according to the given training data.
 
@@ -526,11 +505,9 @@ class LGBMModel(lgb.LGBMModel):
 
         params = self.get_params()
 
-
         if (
             not any(
-                verbose_alias in params
-                for verbose_alias in ("verbose", "verbosity")
+                verbose_alias in params for verbose_alias in ("verbose", "verbosity")
             )
             and self.silent
         ):
@@ -565,13 +542,9 @@ class LGBMModel(lgb.LGBMModel):
             args = [p.name for p in signature(eval_metric).parameters.values()]
 
             if len(args) > 3:
-                eval_name, _, is_higher_better = eval_metric(
-                    y, y, sample_weight, group
-                )
+                eval_name, _, is_higher_better = eval_metric(y, y, sample_weight, group)
             elif len(args) > 2:
-                eval_name, _, is_higher_better = eval_metric(
-                    y, y, sample_weight
-                )
+                eval_name, _, is_higher_better = eval_metric(y, y, sample_weight)
             else:
                 eval_name, _, is_higher_better = eval_metric(y, y)
 
@@ -588,12 +561,12 @@ class LGBMModel(lgb.LGBMModel):
             eval_name = params["metric"]
             is_higher_better = _is_higher_better(params["metric"])
 
-        fobj = self.objective if callable(self.objective) else None  # Pass the callable directly
+        fobj = (
+            self.objective if callable(self.objective) else None
+        )  # Pass the callable directly
 
         init_model = (
-            init_model.booster_
-            if isinstance(init_model, lgb.LGBMModel)
-            else init_model
+            init_model.booster_ if isinstance(init_model, lgb.LGBMModel) else init_model
         )
 
         self.study_ = self._make_study(is_higher_better)
@@ -609,10 +582,7 @@ class LGBMModel(lgb.LGBMModel):
 
         model_dir = self._get_model_dir()
         weights = np.array(
-            [
-                np.sum(sample_weight[train])
-                for train, _ in cv.split(X, y, groups=groups)
-            ]
+            [np.sum(sample_weight[train]) for train, _ in cv.split(X, y, groups=groups)]
         )
 
         objective = _Objective(
@@ -649,9 +619,7 @@ class LGBMModel(lgb.LGBMModel):
 
         best_iteration = self.study_.best_trial.user_attrs["best_iteration"]
 
-        self._best_iteration = (
-            None if early_stopping_rounds is None else best_iteration
-        )
+        self._best_iteration = None if early_stopping_rounds is None else best_iteration
         self._best_score = self.study_.best_value
         self._objective = params["objective"]
         self.best_params_ = {**params, **self.study_.best_params}
@@ -898,7 +866,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
         init_model: Optional[Union[lgb.Booster, lgb.LGBMModel, str]] = None,
         groups: Optional[OneDimArrayLikeType] = None,
         optuna_callbacks: Optional[List[Callable]] = None,
-        **fit_params: Any
+        **fit_params: Any,
     ) -> "LGBMClassifier":
         """Docstring is inherited from the LGBMModel."""
         self.encoder_ = LabelEncoder()
@@ -921,7 +889,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
             init_model=init_model,
             groups=groups,
             optuna_callbacks=optuna_callbacks,
-            **fit_params
+            **fit_params,
         )
 
     fit.__doc__ = LGBMModel.fit.__doc__
@@ -933,7 +901,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
         num_iteration: Optional[int] = None,
         pred_leaf: bool = False,
         pred_contrib: bool = False,
-        **predict_params: Any
+        **predict_params: Any,
     ) -> np.ndarray:
         """Docstring is inherited from the LGBMModel."""
         result = self.predict_proba(
@@ -942,7 +910,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
             num_iteration=num_iteration,
             pred_leaf=pred_leaf,
             pred_contrib=pred_contrib,
-            **predict_params
+            **predict_params,
         )
 
         if raw_score or pred_leaf or pred_contrib:
@@ -961,7 +929,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
         num_iteration: Optional[int] = None,
         pred_leaf: bool = False,
         pred_contrib: bool = False,
-        **predict_params: Any
+        **predict_params: Any,
     ) -> np.ndarray:
         """Predict class probabilities.
 
@@ -999,7 +967,7 @@ class LGBMClassifier(LGBMModel, ClassifierMixin):
             num_iteration=num_iteration,
             pred_leaf=pred_leaf,
             pred_contrib=pred_contrib,
-            **predict_params
+            **predict_params,
         )
 
         if self._n_classes > 2 or raw_score or pred_leaf or pred_contrib:
