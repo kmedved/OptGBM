@@ -35,6 +35,32 @@ By default, the following hyperparameters will be searched.
 - `min_data_in_leaf`
 - `num_leaves`
 
+## Customizing the Search Space
+
+You can take full control of the hyperparameter search by passing a `param_distributions` dictionary to the estimator. The values should be Optuna distribution objects.
+
+```python
+import optgbm as lgb
+from optuna.distributions import IntDistribution, FloatDistribution
+from sklearn.datasets import load_breast_cancer
+
+# Define a custom search space
+param_distributions = {
+    "num_leaves": IntDistribution(20, 100),
+    "learning_rate": FloatDistribution(0.01, 0.2, log=True),
+    "lambda_l1": FloatDistribution(1e-8, 1.0, log=True),
+}
+
+clf = lgb.LGBMClassifier(
+    param_distributions=param_distributions,
+    n_trials=50,  # Search more trials for the custom space
+    random_state=42,
+)
+
+X, y = load_breast_cancer(return_X_y=True)
+clf.fit(X, y)
+```
+
 ## Installation
 
 ```
