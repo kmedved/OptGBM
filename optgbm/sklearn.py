@@ -4,6 +4,7 @@ import copy
 import logging
 import pathlib
 import pickle
+import tempfile
 import time
 from inspect import signature
 
@@ -34,7 +35,10 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
 
 from .basic import _VotingBooster
-from sklearn.utils import safe_indexing
+try:
+    from sklearn.utils import safe_indexing
+except ImportError:  # scikit-learn >=1.3
+    from sklearn.utils._indexing import _safe_indexing as safe_indexing
 from .typing import CVType
 from .typing import LightGBMCallbackEnvType
 from .typing import OneDimArrayLikeType
@@ -86,7 +90,16 @@ OBJECTIVE2METRIC = {
 
 
 def _is_higher_better(metric: str) -> bool:
-    return metric in ["auc"]
+    # A more comprehensive list of metrics where higher is better.
+    return metric in [
+        "auc",
+        "auc_mu",
+        "average_precision",
+        "map",
+        "accuracy",
+        "f1",
+        "r2",
+    ]
 
 
 class _LightGBMExtractionCallback(object):
@@ -296,7 +309,7 @@ class LGBMModel(lgb.LGBMModel):
         refit: bool = True,
         study: Optional[study_module.Study] = None,
         timeout: Optional[float] = None,
-        model_dir: Union[pathlib.Path, str] = "optgbm_info",
+        model_dir: Optional[Union[pathlib.Path, str]] = None,
     ) -> None:
         super().__init__(
             boosting_type=boosting_type,
@@ -329,6 +342,7 @@ class LGBMModel(lgb.LGBMModel):
         self.study = study
         self.timeout = timeout
         self.model_dir = model_dir
+        self._temp_dir = None
 
     def _check_is_fitted(self) -> None:
         getattr(self, "fitted_")
@@ -353,9 +367,13 @@ class LGBMModel(lgb.LGBMModel):
         return random_state.randint(0, MAX_INT)
 
     def _get_model_dir(self) -> pathlib.Path:
-        model_dir = str(self.model_dir)
+        if self.model_dir is None:
+            # Create a temporary directory that will be cleaned up automatically
+            # if the user doesn't specify a permanent one.
+            self._temp_dir = tempfile.TemporaryDirectory()
+            return pathlib.Path(self._temp_dir.name)
 
-        return pathlib.Path(model_dir)
+        return pathlib.Path(str(self.model_dir))
 
     def _make_booster(
         self,
@@ -421,6 +439,7 @@ class LGBMModel(lgb.LGBMModel):
         sample_weight: Optional[OneDimArrayLikeType] = None,
         group: Optional[OneDimArrayLikeType] = None,
         eval_metric: Optional[Union[Callable, List[str], str]] = None,
+        eval_direction: Optional[str] = None,
         early_stopping_rounds: Optional[int] = 10,
         feature_name: Union[List[str], str] = "auto",
         categorical_feature: Union[List[int], List[str], str] = "auto",
@@ -449,6 +468,10 @@ class LGBMModel(lgb.LGBMModel):
         eval_metric
             Evaluation metric. See
             https://lightgbm.readthedocs.io/en/latest/Parameters.html#metric.
+
+        eval_direction
+            When ``eval_metric`` is a callable, specify ``'minimize'`` or
+            ``'maximize'`` to determine the optimization direction.
 
         early_stopping_rounds
             Used to activate early stopping. The model will train until the
@@ -559,21 +582,25 @@ class LGBMModel(lgb.LGBMModel):
             params["num_classes"] = self._n_classes
 
         if callable(eval_metric):
+            if eval_direction not in ["minimize", "maximize"]:
+                raise ValueError(
+                    "When using a callable for `eval_metric`, you must provide "
+                    "`eval_direction` as either 'minimize' or 'maximize'."
+                )
+
             params["metric"] = "None"
-            feval = eval_metric  # Pass the callable directly
+            feval = eval_metric
 
             args = [p.name for p in signature(eval_metric).parameters.values()]
 
             if len(args) > 3:
-                eval_name, _, is_higher_better = eval_metric(
-                    y, y, sample_weight, group
-                )
+                eval_name, _, _ = eval_metric(y, y, sample_weight, group)
             elif len(args) > 2:
-                eval_name, _, is_higher_better = eval_metric(
-                    y, y, sample_weight
-                )
+                eval_name, _, _ = eval_metric(y, y, sample_weight)
             else:
-                eval_name, _, is_higher_better = eval_metric(y, y)
+                eval_name, _, _ = eval_metric(y, y)
+
+            is_higher_better = eval_direction == "maximize"
 
         elif isinstance(eval_metric, list):
             raise ValueError("eval_metric is not allowed to be a list.")

@@ -256,13 +256,18 @@ def test_fit_with_fit_params(
         n_estimators=n_estimators, n_trials=n_trials, model_dir=tmp_path
     )
 
-    clf.fit(
-        X,
-        y,
-        callbacks=callbacks,
-        eval_metric=eval_metric,
-        optuna_callbacks=optuna_callbacks,
-    )
+    fit_kwargs = {
+        "X": X,
+        "y": y,
+        "callbacks": callbacks,
+        "eval_metric": eval_metric,
+        "optuna_callbacks": optuna_callbacks,
+    }
+
+    if callable(eval_metric):
+        fit_kwargs["eval_direction"] = "minimize"
+
+    clf.fit(**fit_kwargs)
 
 
 def test_fit_with_unused_fit_params(tmp_path: pathlib.Path) -> None:
