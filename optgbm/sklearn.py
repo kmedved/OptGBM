@@ -142,7 +142,7 @@ class _Objective(object):
         dataset = copy.copy(self.dataset)
         callbacks = self._get_callbacks(trial)  # type: List[Callable]
         if self.fobj is not None:
-            params["fobj"] = self.fobj
+            params["objective"] = self.fobj
         if self.feval is not None:
             params["feval"] = self.feval
         eval_hist = lgb.cv(
@@ -366,11 +366,14 @@ class LGBMModel(lgb.LGBMModel):
         init_model: Optional[Union[lgb.Booster, lgb.LGBMModel, str]] = None,
     ) -> Union[_VotingBooster, lgb.Booster]:
         if self.refit:
+            train_params = params.copy()
+            if fobj is not None:
+                train_params['objective'] = fobj
+
             booster = lgb.train(
-                params,
+                train_params,
                 dataset,
                 num_boost_round=num_boost_round,
-                fobj=fobj,
                 feature_name=feature_name,
                 categorical_feature=categorical_feature,
                 callbacks=callbacks,
