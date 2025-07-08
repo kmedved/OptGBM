@@ -370,12 +370,15 @@ class LGBMModel(lgb.LGBMModel):
             if fobj is not None:
                 train_params['objective'] = fobj
 
+            # Add feature_name and categorical_feature to the params dictionary
+            # The 'auto' default is handled by LightGBM, so we can pass it directly.
+            train_params['feature_name'] = feature_name
+            train_params['categorical_feature'] = categorical_feature
+
             booster = lgb.train(
                 train_params,
                 dataset,
                 num_boost_round=num_boost_round,
-                feature_name=feature_name,
-                categorical_feature=categorical_feature,
                 callbacks=callbacks,
                 init_model=init_model,
             )
