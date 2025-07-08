@@ -1,9 +1,56 @@
 [build-system]
 requires = [
     "setuptools>=35.0.2",
-    "wheel>= 0.29.0",
+    "wheel>=0.29.0",
+    "setuptools_scm",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "OptGBM"
+dynamic = ["version"]
+author = "Y-oHr-N"
+author_email = "y.ohr.n@gmail.com"
+description = "Scikit-learn compatible estimator that tunes hyperparameters in LightGBM with Optuna."
+readme = "README.md"
+license = { text = "MIT License" }
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "lightgbm>=4.0.0",
+    "numpy",
+    "optuna>=3.0.0",
+    "scikit-learn>=1.0.0",
+    "natsort",
+    "pandas",
+    "scipy",
+    "importlib-metadata; python_version < '3.8'",
+]
+
+[project.urls]
+Homepage = "https://github.com/Y-oHr-N/OptGBM"
+
+[project.optional-dependencies]
+testing = [
+    "matplotlib",
+]
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+[tool.setuptools_scm]
+# This section enables versioning from git tags
 
 [tool.black]
 line-length = 79
