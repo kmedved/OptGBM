@@ -291,6 +291,7 @@ class LGBMModel(lgb.LGBMModel):
         timeout: Optional[float] = None,
         model_dir: Optional[Union[pathlib.Path, str]] = None,
     ) -> None:
+        self.verbosity = verbosity
         self.verbose = -1 if verbosity is None else verbosity
         super().__init__(
             boosting_type=boosting_type,
@@ -675,8 +676,6 @@ class LGBMModel(lgb.LGBMModel):
         self.n_splits_ = cv.get_n_splits(X, y, groups=groups)
         self.fitted_ = True
         self.n_features_in_ = self._n_features
-        if self.refit:
-            self.n_iter_ = self._Booster.current_iteration()
 
         logger.info(
             "Finished hyperparemeter search! "
@@ -699,6 +698,17 @@ class LGBMModel(lgb.LGBMModel):
             callbacks=callbacks,
             init_model=init_model,
         )
+
+        # --- Set scikit-learn compatibility attributes AFTER booster exists ---
+        self.booster_ = self._Booster
+        self.feature_importances_ = self._Booster.feature_importance(
+            importance_type=self.importance_type
+        )
+        self.n_features_ = self._n_features
+
+        if self.refit:
+            self.n_iter_ = self._Booster.current_iteration()
+        # --- End of compatibility attributes ---
 
         elapsed_time = time.perf_counter() - start_time
 
