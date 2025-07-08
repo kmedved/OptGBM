@@ -21,7 +21,7 @@ X, y = load_diabetes(return_X_y=True)
 
 reg.fit(X, y)
 
-y_pred = reg.predict(X, y)
+y_pred = reg.predict(X)
 ```
 
 By default, the following hyperparameters will be searched.
