@@ -712,8 +712,10 @@ class LGBMModel(lgb.LGBMModel):
 
         best_iteration = self.study_.best_trial.user_attrs["best_iteration"]
 
+        # LightGBM's LGBMModel already exposes read-only property best_iteration_
+        # that returns self._best_iteration, so we only need to populate the
+        # private attribute.
         self._best_iteration = None if early_stopping_rounds is None else best_iteration
-        self.best_iteration_ = self._best_iteration
         self._best_score = self.study_.best_value
         self._objective = params["objective"]
         self.best_params_ = {**params, **self.study_.best_params}
