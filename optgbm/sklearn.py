@@ -275,6 +275,25 @@ class LGBMModel(lgb.LGBMModel):
         # This now correctly calls our own booster_ property
         return self.booster_.feature_importance(self.importance_type)
 
+    @property
+    def n_features_(self) -> int:
+        """The number of features of the fitted model (overridden)."""
+        self._check_is_fitted()
+
+        return self._n_features
+
+    @property
+    def n_iter_(self) -> Optional[int]:
+        """The number of boosting iterations performed (overridden)."""
+        self._check_is_fitted()
+
+        if self.refit:
+            # If we refit, the true number of iterations is from the final booster.
+            return self._Booster.current_iteration()
+        else:
+            # Otherwise, it's the best iteration from the CV search.
+            return self._best_iteration
+
     def __init__(
         self,
         boosting_type: str = "gbdt",
@@ -713,11 +732,6 @@ class LGBMModel(lgb.LGBMModel):
             callbacks=callbacks,
             init_model=init_model,
         )
-
-        self.n_features_ = self._n_features
-
-        if self.refit:
-            self.n_iter_ = self._Booster.current_iteration()
 
         elapsed_time = time.perf_counter() - start_time
 
