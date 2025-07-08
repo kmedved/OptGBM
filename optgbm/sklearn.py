@@ -260,6 +260,21 @@ class LGBMModel(lgb.LGBMModel):
 
         return self.study_.best_trial.number
 
+    @property
+    def booster_(self) -> Union[_VotingBooster, lgb.Booster]:
+        """The underlying booster of this model (overridden)."""
+        self._check_is_fitted()
+
+        return self._Booster
+
+    @property
+    def feature_importances_(self) -> np.ndarray:
+        """The feature importances (overridden)."""
+        self._check_is_fitted()
+
+        # This now correctly calls our own booster_ property
+        return self.booster_.feature_importance(self.importance_type)
+
     def __init__(
         self,
         boosting_type: str = "gbdt",
@@ -699,16 +714,10 @@ class LGBMModel(lgb.LGBMModel):
             init_model=init_model,
         )
 
-        # --- Set scikit-learn compatibility attributes AFTER booster exists ---
-        self.booster_ = self._Booster
-        self.feature_importances_ = self._Booster.feature_importance(
-            importance_type=self.importance_type
-        )
         self.n_features_ = self._n_features
 
         if self.refit:
             self.n_iter_ = self._Booster.current_iteration()
-        # --- End of compatibility attributes ---
 
         elapsed_time = time.perf_counter() - start_time
 
