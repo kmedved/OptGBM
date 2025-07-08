@@ -24,8 +24,6 @@ from optuna import integration
 
 # from optuna_integration.lightgbm import alias
 
-from .alias import _handling_alias_metrics
-from .alias import _handling_alias_parameters
 
 from optuna import samplers
 from optuna import study as study_module
@@ -36,10 +34,9 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
 
 from .basic import _VotingBooster
-from .compat import _EvalFunctionWrapper
-from .compat import _ObjectiveFunctionWrapper
-from .compat import _safe_indexing
-from .compat import FEATURE_FRACTION_HIGH
+from lightgbm.sklearn import _EvalFunctionWrapper
+from lightgbm.sklearn import _ObjectiveFunctionWrapper
+from sklearn.utils import _safe_indexing
 from .typing import CVType
 from .typing import LightGBMCallbackEnvType
 from .typing import OneDimArrayLikeType
@@ -156,8 +153,9 @@ class _Objective(object):
             init_model=self.init_model,
             num_boost_round=self.n_estimators,
         )  # Dict[str, List[float]]
+        # Note: The validation set in lgb.cv is named "valid" by default.
         values = eval_hist[
-            "{}-mean".format(self.eval_name)
+            f"valid {self.eval_name}-mean"
         ]  # type: List[float]
         best_iteration = len(values)  # type: int
 
@@ -203,7 +201,6 @@ class _Objective(object):
             pruning_callback = integration.LightGBMPruningCallback(
                 trial,
                 metric=self.eval_name,
-                valid_name="valid",
             )  # type: integration.LightGBMPruningCallback
 
             callbacks.append(pruning_callback)
@@ -217,8 +214,8 @@ class _Objective(object):
         params = self.params.copy()  # type: Dict[str, Any]
 
         if self.param_distributions is None:
-            params["feature_fraction"] = trial.suggest_discrete_uniform(
-                "feature_fraction", 0.1, FEATURE_FRACTION_HIGH, 0.05
+            params["feature_fraction"] = trial.suggest_float(
+                "feature_fraction", 0.1, 1.0, step=0.05
             )
             params["max_depth"] = trial.suggest_int("max_depth", 1, 7)
             params["num_leaves"] = trial.suggest_int(
@@ -230,11 +227,11 @@ class _Objective(object):
                 1,
                 max(1, int(self.n_samples / params["num_leaves"])),
             )
-            params["lambda_l1"] = trial.suggest_loguniform(
-                "lambda_l1", 1e-09, 10.0
+            params["lambda_l1"] = trial.suggest_float(
+                "lambda_l1", 1e-9, 10.0, log=True
             )
-            params["lambda_l2"] = trial.suggest_loguniform(
-                "lambda_l2", 1e-09, 10.0
+            params["lambda_l2"] = trial.suggest_float(
+                "lambda_l2", 1e-9, 10.0, log=True
             )
 
             if params["boosting_type"] != "goss":
@@ -248,16 +245,14 @@ class _Objective(object):
                 )
 
                 if params["bagging_freq"] > 0:
-                    params["bagging_fraction"] = (
-                        trial.suggest_discrete_uniform(
-                            "bagging_fraction", 0.5, 0.95, 0.05
-                        )
+                    params["bagging_fraction"] = trial.suggest_float(
+                        "bagging_fraction", 0.5, 0.95, step=0.05
                     )
 
             return params
 
         for name, distribution in self.param_distributions.items():
-            params[name] = trial._suggest(name, distribution)
+            params[name] = trial.suggest(name, distribution)
 
         return params
 
@@ -535,9 +530,6 @@ class LGBMModel(lgb.LGBMModel):
 
         params = self.get_params()
 
-        # alias._handling_alias_parameters(params)
-        _handling_alias_parameters(params)
-        # _handling_alias_metrics(params) - Unclear?
 
         if (
             not any(

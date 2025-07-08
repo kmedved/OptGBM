@@ -68,14 +68,14 @@ def zero_one_loss_with_sample_weight_and_group(
 def test_ogbm_classifier(tmp_path: pathlib.Path) -> None:
     pytest.importorskip("sklearn", minversion="0.20.0")
 
-    # from sklearn.utils.estimator_checks import check_estimator
+    from sklearn.utils.estimator_checks import check_estimator
     from sklearn.utils.estimator_checks import check_estimators_pickle
     from sklearn.utils.estimator_checks import check_set_params
 
     clf = OGBMClassifier(model_dir=tmp_path)
     name = clf.__class__.__name__
 
-    # check_estimator(clf)
+    check_estimator(clf)
 
     check_estimators_pickle(name, clf)
     check_set_params(name, clf)
@@ -84,14 +84,14 @@ def test_ogbm_classifier(tmp_path: pathlib.Path) -> None:
 def test_ogbm_regressor(tmp_path: pathlib.Path) -> None:
     pytest.importorskip("sklearn", minversion="0.20.0")
 
-    # from sklearn.utils.estimator_checks import check_estimator
+    from sklearn.utils.estimator_checks import check_estimator
     from sklearn.utils.estimator_checks import check_estimators_pickle
     from sklearn.utils.estimator_checks import check_set_params
 
     reg = OGBMRegressor(model_dir=tmp_path)
     name = reg.__class__.__name__
 
-    # check_estimator(reg)
+    check_estimator(reg)
 
     check_estimators_pickle(name, reg)
     check_set_params(name, reg)
