@@ -145,8 +145,6 @@ class _Objective(object):
         callbacks = self._get_callbacks(trial)  # type: List[Callable]
         if self.fobj is not None:
             params["objective"] = self.fobj
-        if self.feval is not None:
-            params["feval"] = self.feval
         eval_hist = lgb.cv(
             params,
             dataset,
@@ -154,6 +152,7 @@ class _Objective(object):
             folds=self.cv,
             init_model=self.init_model,
             num_boost_round=self.n_estimators,
+            feval=self.feval,
             return_cvbooster=True,
         )  # Dict[str, Any]
         # Note: The validation set in lgb.cv is named "valid" by default.
@@ -363,6 +362,7 @@ class LGBMModel(lgb.LGBMModel):
         best_index: int,
         weights: np.ndarray,
         fobj: Optional[Callable] = None,
+        feval: Optional[Callable] = None,
         callbacks: Optional[List[Callable]] = None,
         init_model: Optional[Union[lgb.Booster, lgb.LGBMModel, str]] = None,
     ) -> Union[_VotingBooster, lgb.Booster]:
@@ -380,6 +380,7 @@ class LGBMModel(lgb.LGBMModel):
                 num_boost_round=num_boost_round,
                 callbacks=callbacks,
                 init_model=init_model,
+                feval=feval,
             )
 
             booster.free_dataset()
@@ -694,6 +695,7 @@ class LGBMModel(lgb.LGBMModel):
             self.best_index_,
             weights,
             fobj=fobj,
+            feval=feval,
             callbacks=callbacks,
             init_model=init_model,
         )
