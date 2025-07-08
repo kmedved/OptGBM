@@ -361,8 +361,6 @@ class LGBMModel(lgb.LGBMModel):
         best_index: int,
         weights: np.ndarray,
         fobj: Optional[Callable] = None,
-        feature_name: Union[List[str], str] = "auto",
-        categorical_feature: Union[List[int], List[str], str] = "auto",
         callbacks: Optional[List[Callable]] = None,
         init_model: Optional[Union[lgb.Booster, lgb.LGBMModel, str]] = None,
     ) -> Union[_VotingBooster, lgb.Booster]:
@@ -691,8 +689,6 @@ class LGBMModel(lgb.LGBMModel):
             self.best_index_,
             weights,
             fobj=fobj,
-            feature_name=feature_name,
-            categorical_feature=categorical_feature,
             callbacks=callbacks,
             init_model=init_model,
         )
