@@ -10,6 +10,30 @@ OptGBM (= [Optuna](https://optuna.org/) + [LightGBM](http://github.com/microsoft
 
 This package requires Python 3.8 or newer.
 
+## Usage Overview
+
+The package exposes `LGBMClassifier` and `LGBMRegressor` classes that behave
+like the `lightgbm.sklearn` estimators but automatically run a hyperparameter
+search using Optuna under the hood.  Any parameters accepted by LightGBM can be
+passed to these classes.  Additional parameters control the optimization
+process:
+
+- `n_trials`: number of Optuna trials to run.
+- `timeout`: maximum optimization time in seconds.
+- `cv`: cross‑validation strategy (integer, splitter instance or iterable).
+- `param_distributions`: optional Optuna distributions defining a custom search
+  space.
+- `enable_pruning`: enable Optuna pruning based on early stopping.
+- `refit`: refit the best trial after the search finishes.
+- `study`: provide an existing Optuna study object.
+- `model_dir`: directory where intermediate LightGBM models are stored.
+
+Key attributes exposed after fitting include `best_params_`, `best_score_` and
+`booster_` – the underlying LightGBM booster.
+
+The estimators support features such as parallelism via `n_jobs`, early stopping
+and group‑aware CV, which are described in the sections below.
+
 ## Examples
 
 ```python
@@ -59,6 +83,56 @@ clf = lgb.LGBMClassifier(
 
 X, y = load_breast_cancer(return_X_y=True)
 clf.fit(X, y)
+```
+
+## Parallelism with `n_jobs`
+
+`n_jobs` controls how many CPU cores are used during both the hyperparameter
+search and prediction.  Pass a positive integer to limit the number of threads
+or set it to `-1` to use all available cores.
+
+```python
+clf = lgb.LGBMClassifier(n_trials=100, n_jobs=-1)
+```
+
+During prediction you may also override the value:
+
+```python
+y_pred = clf.predict(X_test, n_jobs=2)
+```
+
+## Early Stopping
+
+The `fit` method accepts `early_stopping_rounds` which is forwarded to
+LightGBM's CV procedure.  When specified, training stops when the validation
+score has not improved for the given number of rounds.
+
+```python
+clf.fit(X, y, early_stopping_rounds=10)
+```
+
+## Group-aware Cross-Validation
+
+If your data contain groups, supply them via the `groups` parameter of `fit`.
+OptGBM will use them while performing cross-validation splits.  You can also
+provide a `GroupKFold` instance to `cv` for custom splitting strategies.
+
+```python
+groups = np.repeat(np.arange(10), len(X) // 10)
+cv = GroupKFold(n_splits=5)
+clf = lgb.LGBMClassifier(cv=cv)
+clf.fit(X, y, groups=groups)
+```
+
+## Accessing the Underlying Booster
+
+After fitting, the trained LightGBM booster (or voting ensemble when `refit` is
+False) is available via the `booster_` attribute.  You can use this object to
+leverage any LightGBM specific functionality.
+
+```python
+booster = clf.booster_
+importance = booster.feature_importance()
 ```
 
 ## Installation
