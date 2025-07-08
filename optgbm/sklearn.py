@@ -198,11 +198,16 @@ class _Objective(object):
             # suffix and specify the validation dataset name used by
             # ``lgb.cv``.  LightGBMPruningCallback expects these parameters to
             # match the intermediate results reported during training.
-            pruning_callback = integration.LightGBMPruningCallback(
-                trial,
-                metric=self.eval_name,
-                valid_name="valid",
-            )  # type: integration.LightGBMPruningCallback
+            try:
+                # For Optuna >= 3.6
+                pruning_callback = integration.LightGBMPruningCallback(
+                    trial, metric=self.eval_name, valid_name="valid"
+                )
+            except TypeError:
+                # Fallback for Optuna < 3.6
+                pruning_callback = integration.LightGBMPruningCallback(
+                    trial, metric=self.eval_name
+                )
 
             callbacks.append(pruning_callback)
 
@@ -571,7 +576,7 @@ class LGBMModel(lgb.LGBMModel):
             sample_weight=sample_weight,
             accept_sparse=True,
             ensure_min_samples=2,
-            estimator=None,
+            estimator=self,
             force_all_finite=False,
         )
 
